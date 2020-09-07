@@ -1,0 +1,42 @@
+name: Redis-Locker Library
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - src/**/*.ts
+      - .github/workflows/*.yaml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v2-beta
+        with:
+          node-version: "14"
+          check-latest: true
+      - name: Setup Yarn Cache
+        run: yarn config set yarn-offline-mirror ~/.yarn-offline
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: ~/.yarn-offline
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install packages
+        run: yarn install
+      - name: Validate with eslint
+        run: yarn eslint
+      - name: Build application
+        run: yarn build
+      - name: Build docs
+        run: yarn docs

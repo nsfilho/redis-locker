@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Prepare repository
+      - name: Setup node
+        uses: actions/setup-node@v2-beta
+        with:
+          node-version: "14"
+          check-latest: true
+      - name: Setup Yarn Cache
+        run: yarn config set yarn-offline-mirror ~/.yarn-offline
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: ~/.yarn-offline
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install packages
+        run: yarn install
+      - name: Validate with eslint
+        run: yarn eslint
+      - name: Build application
+        run: yarn build
+      - name: Build docs
+        run: yarn docs
+      - name: NPM Publish
+        run: yarn publish
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+      # Create a release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Deploy to pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+      - name: Archiving files
+        run: |
+          tar --exclude='.git' --exclude 'node_modules' --exclude='*.tar.gz' -czvf /tmp/docs.tar.gz ./docs
+      - name: Upload docs.tar.gz
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: /tmp/docs.tar.gz
+          asset_name: docs.tar.gz
+          asset_content_type: application/octet-stream
