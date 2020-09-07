@@ -22,7 +22,7 @@
 module.exports = {
     mode: 'modules',
     out: 'docs',
-    name: 'uniqueExecution',
+    name: 'redis-locker',
     inputFiles: ['./src'],
     exclude: '**/*.test.ts',
 };
