@@ -2,6 +2,7 @@ src
 docs
 .vscode
 .github
+sample
 CHANGELOG.md
 .eslintrc.js
 .prettierrc.js
