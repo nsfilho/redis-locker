@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/nsfilho/redis-locker/compare/v0.1.3...v0.1.4) (2020-09-07)
+
+
+### Bug Fixes
+
+* **docs:** changing doc title ([68cedf8](https://github.com/nsfilho/redis-locker/commit/68cedf8a233de6e48f9dde66e5808ccbd3805d5f))
+
 ### [0.1.3](https://github.com/nsfilho/redis-locker/compare/v0.1.2...v0.1.3) (2020-09-07)
 
 
