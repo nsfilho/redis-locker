@@ -1,0 +1,175 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>uniqueExecution</title>
+	<meta name="description" content="Documentation for uniqueExecution">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="assets/js/search.json" data-base=".">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="index.html" class="title">uniqueExecution</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+							<input type="checkbox" id="tsd-filter-only-exported" />
+							<label class="tsd-widget" for="tsd-filter-only-exported">Only exported</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="globals.html">Globals</a>
+				</li>
+			</ul>
+			<h1>uniqueExecution</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<div class="tsd-panel tsd-typography">
+				<a href="#redis-locker-library" id="redis-locker-library" style="color: inherit; text-decoration: none;">
+					<h1>Redis-Locker Library</h1>
+				</a>
+				<p>A very simple and small library to guarantee a exclusive execution of a function in
+				a multi-instance environment like <code>docker</code> and <code>kubernetes</code> (k8s).</p>
+				<p>It is very useful for migrations (only one API/Micro-services instance will execute at
+				the same time).</p>
+				<blockquote>
+					<p>By design, for an easy use, this library will use some environment variables and an exclusive connection with <code>redis</code> (because sometimes your redis connection isn&#39;t available to guarantee the role process).</p>
+				</blockquote>
+				<ul>
+					<li>Project licensed under: GPLv3</li>
+					<li>Site Documentation: <a href="https://nsfilho.github.io/redis-locker/index.html">Homepage</a></li>
+					<li>Repository: <a href="https://github.com/nsfilho/redis-locker.git">GitHub</a></li>
+				</ul>
+				<a href="#environment-variables" id="environment-variables" style="color: inherit; text-decoration: none;">
+					<h2>Environment Variables</h2>
+				</a>
+				<p>This services use some environment variables to pre-adjust some things, like:</p>
+				<ul>
+					<li><code>REDIS_MAIN_CLUSTER</code>: a redis cluster or host, example and default: <code>[{ port: 6379, host: &#39;127.0.0.1&#39; }]</code>;</li>
+					<li><code>REDIS_MAIN_PASSWORD</code>: a password for access redis, example and default: <code>password</code>;</li>
+					<li><code>REDIS_DEBUG_CONSOLE</code>: if true, show in a console some debug information. Default: false.</li>
+					<li><code>LOCKER_PREFIX</code>: all calls has ben prefixed by this (facility to not share same resource by different micro-services). Default: LOCKER.</li>
+					<li><code>LOCKER_PING_TIMEOUT</code>: maximum amount of time for consider a remote service un-responsive by not update their ping and consider death. Default: 5000.</li>
+					<li><code>LOCKER_PING_INTERVAL</code>: maximum amount of time for a service update their ping. This value must be less than <code>LOCKER_PING_TIMEOUT</code>. Default: 2000.</li>
+					<li><code>LOCKER_CHECK_INTERVAL</code>: timer to check if the resource is available now. This value could be like <code>LOCKER_PING_INTERVAL</code> or less. Default: 500.</li>
+					<li><code>LOCKER_DEBUG_CONSOLE</code>: show in console some debug messages about locker process.</li>
+				</ul>
+				<a href="#example" id="example" style="color: inherit; text-decoration: none;">
+					<h2>Example</h2>
+				</a>
+				<pre><code class="language-javascript"><span class="hljs-comment">/* eslint-disable no-console */</span>
+<span class="hljs-keyword">import</span> { lockResource } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;../src&#x27;</span>;
+
+<span class="hljs-comment">/** Create a delay timer */</span>
+<span class="hljs-keyword">const</span> delay = <span class="hljs-keyword">async</span> (timer: number): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; =&gt;
+    <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve</span>) =&gt;</span> {
+        <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> {
+            resolve();
+        }, timer);
+    });
+
+<span class="hljs-comment">/** Locking a resource for all instances of this software */</span>
+lockResource({
+    <span class="hljs-attr">resourceName</span>: <span class="hljs-string">&#x27;lockTest&#x27;</span>,
+    <span class="hljs-attr">callback</span>: <span class="hljs-keyword">async</span> () =&gt; {
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">&#x27;Locking this resource for all instance by 10 secs&#x27;</span>);
+        <span class="hljs-keyword">await</span> delay(<span class="hljs-number">10000</span>);
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">&#x27;Unlocking, making available for others!&#x27;</span>);
+    },
+});</code></pre>
+			</div>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class="globals  ">
+						<a href="globals.html"><em>Globals</em></a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_constants_index_.html">&quot;constants/index&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_constants_locker_.html">&quot;constants/locker&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_constants_redis_.html">&quot;constants/redis&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_index_.html">&quot;index&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_services_locker_index_.html">&quot;services/locker/index&quot;</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/_services_redis_index_.html">&quot;services/redis/index&quot;</a>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-object-literal"><span class="tsd-kind-icon">Object literal</span></li>
+				<li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li>
+				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
