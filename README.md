@@ -8,7 +8,9 @@ the same time).
 
 > By design, for an easy use, this library will use some environment variables and an exclusive connection with `redis` (because sometimes your redis connection isn't available to guarantee the role process).
 
-Project licensed under: GPLv3
+-   Project licensed under: GPLv3
+-   Site Documentation: [Homepage](https://nsfilho.github.io/redis-locker/index.html)
+-   Repository: [GitHub](https://github.com/nsfilho/redis-locker.git)
 
 ## Environment Variables
 
