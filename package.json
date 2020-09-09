@@ -6,8 +6,8 @@
     "license": "GPL-3.0",
     "private": false,
     "dependencies": {
+        "@nsfilho/redis-connection": "^0.1.5",
         "dayjs": "^1.8.35",
-        "ioredis": "^4.18.0",
         "nanoid": "^3.1.12"
     },
     "author": {
@@ -25,7 +25,6 @@
     "devDependencies": {
         "@commitlint/cli": "^9.1.2",
         "@commitlint/config-conventional": "^9.1.2",
-        "@types/ioredis": "^4.17.4",
         "@types/jest": "^26.0.10",
         "@typescript-eslint/eslint-plugin": "^3.10.1",
         "@typescript-eslint/parser": "^3.10.1",

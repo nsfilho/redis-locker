@@ -21,8 +21,8 @@
 /* eslint-disable no-console */
 
 import dayjs from 'dayjs';
+import { getConnection, disconnect } from '@nsfilho/redis-connection';
 import { nanoid } from 'nanoid';
-import { getConnection, disconnect } from '../redis';
 import {
     LOCKER_PREFIX,
     LOCKER_PING_TIMEOUT,

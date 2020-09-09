@@ -18,6 +18,4 @@
  * Author: Nelio Santos <nsfilho@icloud.com>
  * 
  */
-
-export * from './redis';
 export * from './locker';

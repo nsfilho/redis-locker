@@ -621,6 +621,13 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
+"@nsfilho/redis-connection@^0.1.5":
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/@nsfilho/redis-connection/-/redis-connection-0.1.6.tgz#919b7406007b046383adbe38c4e405d0a8e3c5c8"
+  integrity sha512-HOHOsPJjG2duClX5bkc9/cg9boDE0mytoW1aiiAXolxNSEL1H0qCUOF4pHx5LzI+xA/seGKsGMmGKkjHaXAE8A==
+  dependencies:
+    ioredis "^4.18.0"
+
 "@sinonjs/commons@^1.7.0":
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/@sinonjs/commons/-/commons-1.8.1.tgz#e7df00f98a203324f6dc7cc606cad9d4a8ab2217"
@@ -682,13 +689,6 @@
   version "4.1.3"
   resolved "https://registry.yarnpkg.com/@types/graceful-fs/-/graceful-fs-4.1.3.tgz#039af35fe26bec35003e8d86d2ee9c586354348f"
   integrity sha512-AiHRaEB50LQg0pZmm659vNBb9f4SJ0qrAnteuzhSeAUcJKxoYgEnprg/83kppCnc2zvtCKbdZry1a5pVY3lOTQ==
-  dependencies:
-    "@types/node" "*"
-
-"@types/ioredis@^4.17.4":
-  version "4.17.4"
-  resolved "https://registry.yarnpkg.com/@types/ioredis/-/ioredis-4.17.4.tgz#e4c2d8d51ecb1f4752b660f8e19b88b1c5329b2e"
-  integrity sha512-kb5+thmQJ7HHyOAnCOeqRJlF2fyvadHghnLLLKZzCNyShStJeIQtNGGDjA30gWqj6UFSDAWBfGEMKrFDrGfvzQ==
   dependencies:
     "@types/node" "*"
 
