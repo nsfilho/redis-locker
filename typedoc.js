@@ -20,9 +20,7 @@
  */
 
 module.exports = {
-    mode: 'modules',
     out: 'docs',
     name: 'redis-locker',
-    inputFiles: ['./src'],
     exclude: '**/*.test.ts',
 };

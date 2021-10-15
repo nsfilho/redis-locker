@@ -70,7 +70,7 @@ const askForResource = async (options: askForResourceOptions): Promise<ResourceC
         ping: dayjs().toISOString(),
     };
     if (LOCKER_DEBUG_CONSOLE) console.log(`LOCKER(${asking.uniqueId}): Asking for lock resource: ${resourceName}`);
-    await redis.rpush(resourcePath, JSON.stringify(asking));
+    await redis.hset(resourcePath, asking.uniqueId, JSON.stringify(asking));
     return asking;
 };
 
@@ -91,16 +91,21 @@ export const lockResource = async <T>(options: lockerResourceOptions<T>): Promis
         const waitingForResource = setInterval(async () => {
             // update ping for this resource
             if (dayjs().diff(asked.ping, 'millisecond') > LOCKER_PING_INTERVAL) {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-ignore
-                const index = await redis.lpos(resourcePath, JSON.stringify(asked));
                 asked.ping = dayjs().toISOString();
-                await redis.lset(resourcePath, index, JSON.stringify(asked));
+                await redis.hset(resourcePath, asked.uniqueId, JSON.stringify(asked));
             }
 
             // check if it is my turn to execute
-            const indexZero = await redis.lindex(resourcePath, 0);
-            const actual = JSON.parse(indexZero) as ResourceContent;
+            const rawQueue: string[] = await redis.hvals(resourcePath);
+            const queue: ResourceContent[] = rawQueue.map((v) => JSON.parse(v));
+            //             queue.sort((a, b) => {
+            //                 const ms = dayjs(a.ping).diff(b.ping, 'milliseconds');
+            //                 if (ms < 0) return -1;
+            //                 if (ms > 0) return 1;
+            //                 return ms;
+            //             });
+            const actual = queue.shift() as ResourceContent;
+            // console.log('actual', actual.uniqueId, 'asked', asked.uniqueId);
             if (actual.uniqueId === asked.uniqueId && !executing) {
                 executing = true;
                 setImmediate(async () => {
@@ -119,15 +124,15 @@ export const lockResource = async <T>(options: lockerResourceOptions<T>): Promis
                     clearInterval(waitingForResource);
 
                     /** release the resource */
-                    await redis.ltrim(resourcePath, 1, -1);
+                    await redis.hdel(resourcePath, asked.uniqueId);
 
                     /** check for disconnect or not from redis */
                     internalState.count -= 1;
                     if (internalState.count === 0) await disconnect();
                 });
-            } else if (!executing && dayjs().diff(actual.ping, 'millisecond') > LOCKER_PING_TIMEOUT) {
+            } else if (!executing && dayjs().diff(actual.ping, 'milliseconds') > LOCKER_PING_TIMEOUT) {
                 // who asked by resource is die
-                await redis.ltrim(resourcePath, 1, -1);
+                await redis.hdel(resourcePath, actual.uniqueId);
             }
         }, interval || LOCKER_CHECK_INTERVAL);
     });
