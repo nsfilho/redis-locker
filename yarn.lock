@@ -621,10 +621,10 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
-"@nsfilho/redis-connection@^0.1.5":
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/@nsfilho/redis-connection/-/redis-connection-0.1.6.tgz#919b7406007b046383adbe38c4e405d0a8e3c5c8"
-  integrity sha512-HOHOsPJjG2duClX5bkc9/cg9boDE0mytoW1aiiAXolxNSEL1H0qCUOF4pHx5LzI+xA/seGKsGMmGKkjHaXAE8A==
+"@nsfilho/redis-connection@^0.1.8":
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/@nsfilho/redis-connection/-/redis-connection-0.1.8.tgz#426d5bbfe766ecf987b06702798e1c2285dbc60f"
+  integrity sha512-g88a2xcnlEBtifpyeG2wMiEPX7YRByyq2Wd8C3XkP6vjZdoh5pkdacp3BmB1yhJZOynRl2MEahJ3Y1oqpMNF9g==
   dependencies:
     ioredis "^4.18.0"
 
