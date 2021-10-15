@@ -42,10 +42,10 @@ export interface askForResourceOptions {
     resourcePath: string;
 }
 
-export interface lockerResourceOptions {
+export interface lockerResourceOptions<T> {
     resourceName: string;
     interval?: number;
-    callback: () => Promise<void>;
+    callback: () => Promise<T>;
 }
 
 const internalState: {
@@ -79,13 +79,13 @@ const askForResource = async (options: askForResourceOptions): Promise<ResourceC
  * @param options parameters to lock some resource in all instance
  * @returns a number of other instances asked to lock the same resource
  */
-export const lockResource = async (options: lockerResourceOptions): Promise<void> => {
+export const lockResource = async <T>(options: lockerResourceOptions<T>): Promise<T> => {
     const { resourceName, interval, callback } = options;
     const resourcePath = `${LOCKER_PREFIX}:${resourceName}`;
     const redis = await getConnection();
     const asked = await askForResource({ resourceName, resourcePath });
     internalState.count += 1;
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         // check actual resource waiting list
         let executing = false;
         const waitingForResource = setInterval(async () => {
@@ -106,7 +106,14 @@ export const lockResource = async (options: lockerResourceOptions): Promise<void
                 setImmediate(async () => {
                     if (LOCKER_DEBUG_CONSOLE)
                         console.log(`LOCKER(${asked.uniqueId}): Executing locked resource: ${resourceName}`);
-                    await callback();
+
+                    /** Execute callback routine in a protected environment */
+                    try {
+                        const result = await callback();
+                        resolve(result);
+                    } catch (err) {
+                        reject(err);
+                    }
 
                     /** Maintain until callback finished, because we need update ping */
                     clearInterval(waitingForResource);
@@ -117,9 +124,6 @@ export const lockResource = async (options: lockerResourceOptions): Promise<void
                     /** check for disconnect or not from redis */
                     internalState.count -= 1;
                     if (internalState.count === 0) await disconnect();
-
-                    /** finish this process */
-                    resolve();
                 });
             } else if (!executing && dayjs().diff(actual.ping, 'millisecond') > LOCKER_PING_TIMEOUT) {
                 // who asked by resource is die
