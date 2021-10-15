@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.0](https://github.com/nsfilho/redis-locker/compare/v1.1.1...v1.2.0) (2021-10-15)
+
+
+### Features
+
+* **packages:** updating ioredis and husky ([aab484a](https://github.com/nsfilho/redis-locker/commit/aab484a6c813c7e9942ebe001ca0ab19ec18118b))
+
 ### [1.1.1](https://github.com/nsfilho/redis-locker/compare/v1.1.0...v1.1.1) (2021-10-15)
 
 
