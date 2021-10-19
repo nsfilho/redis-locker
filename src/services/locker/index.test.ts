@@ -2,21 +2,21 @@ import { nanoid } from 'nanoid';
 import { disconnect } from '@nsfilho/redis-connection';
 import { lockResource } from './index';
 
-jest.setTimeout(90000);
+jest.setTimeout(120000);
 describe('Simple concurrency', () => {
-    const x = 100;
-    const trava = nanoid();
-    it('Five process, one per turn', async () => {
+    const x = 3000;
+    const trava = 'iruli';
+    it(`Protess: ${x} requisitions, one per turn`, async () => {
         expect.assertions(x);
         const order: number[] = [];
         const funcTest = (index: number) =>
             new Promise((resolve) => {
-                // console.log('Agendado:', index);
                 setTimeout(() => {
                     order.push(index);
-                    // console.log('Finalizado:', index);
+                    // eslint-disable-next-line no-console
+                    console.log('Finalizado:', order.length);
                     resolve(true);
-                }, 1);
+                }, 10);
             });
         const func = async (index: number) => {
             await lockResource({
@@ -25,7 +25,7 @@ describe('Simple concurrency', () => {
             });
         };
         const myProcess = [];
-        for (let k = 0; k < 100; k += 1) myProcess.push(func(k));
+        for (let k = 0; k < x; k += 1) myProcess.push(func(k));
         await Promise.all(myProcess);
         order.sort((a, b) => {
             if (a > b) return 1;

@@ -21,7 +21,6 @@ This services use some environment variables to pre-adjust some things, like:
 -   `REDIS_DEBUG_CONSOLE`: if true, show in a console some debug information. Default: false.
 -   `LOCKER_PREFIX`: all calls has ben prefixed by this (facility to not share same resource by different micro-services). Default: LOCKER.
 -   `LOCKER_PING_TIMEOUT`: maximum amount of time for consider a remote service un-responsive by not update their ping and consider death. Default: 5000.
--   `LOCKER_PING_INTERVAL`: maximum amount of time for a service update their ping. This value must be less than `LOCKER_PING_TIMEOUT`. Default: 2000.
 -   `LOCKER_CHECK_INTERVAL`: timer to check if the resource is available now. This value could be like `LOCKER_PING_INTERVAL` or less. Default: 500.
 -   `LOCKER_DEBUG_CONSOLE`: show in console some debug messages about locker process.
 

@@ -26,13 +26,10 @@ export const LOCKER_PING_TIMEOUT = process.env.LOCKER_PING_TIMEOUT
     ? parseInt(process.env.LOCKER_PING_TIMEOUT, 10)
     : 5000;
 
-/**
- * ping / pong interval
- * important: ping timeout must be greather than that.
- */
+/** maximum amount of time a host not respond about ping to consider death request */
 export const LOCKER_PING_INTERVAL = process.env.LOCKER_PING_INTERVAL
     ? parseInt(process.env.LOCKER_PING_INTERVAL, 10)
-    : 2000;
+    : 2500;
 
 /**
  * interval to check if resources is available.

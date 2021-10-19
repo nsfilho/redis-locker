@@ -19,121 +19,35 @@
  * 
  */
 /* eslint-disable no-console */
+import { LOCKER_PREFIX } from '../../constants';
+import { addResource } from './resource';
 
-import dayjs from 'dayjs';
-import { getConnection, disconnect } from '@nsfilho/redis-connection';
-import { nanoid } from 'nanoid';
-import {
-    LOCKER_PREFIX,
-    LOCKER_PING_TIMEOUT,
-    LOCKER_CHECK_INTERVAL,
-    LOCKER_PING_INTERVAL,
-    LOCKER_DEBUG_CONSOLE,
-} from '../../constants';
-
-export interface ResourceContent {
-    uniqueId: string;
-    from: string;
-    ping: string;
-}
-
-export interface askForResourceOptions {
+export interface lockerResourceOptions<T, E> {
     resourceName: string;
-    resourcePath: string;
+    callback: () => Promise<T> | T;
+    onError?: (err: E) => Promise<void> | void;
 }
-
-export interface lockerResourceOptions<T> {
-    resourceName: string;
-    interval?: number;
-    callback: () => Promise<T>;
-}
-
-const internalState: {
-    count: number;
-} = {
-    count: 0,
-};
-
-/** Exclusive name */
-export const lockerFrom = nanoid();
-
-/**
- * Add to queue of a specific resource
- * @param options resource ask for
- */
-const askForResource = async (options: askForResourceOptions): Promise<ResourceContent> => {
-    const { resourceName, resourcePath } = options;
-    const redis = await getConnection();
-    const asking: ResourceContent = {
-        uniqueId: nanoid(),
-        from: lockerFrom,
-        ping: dayjs().toISOString(),
-    };
-    if (LOCKER_DEBUG_CONSOLE) console.log(`LOCKER(${asking.uniqueId}): Asking for lock resource: ${resourceName}`);
-    await redis.hset(resourcePath, asking.uniqueId, JSON.stringify(asking));
-    return asking;
-};
 
 /**
  * Lock resource between many instances of this software
  * @param options parameters to lock some resource in all instance
  * @returns a number of other instances asked to lock the same resource
  */
-export const lockResource = async <T>(options: lockerResourceOptions<T>): Promise<T> => {
-    const { resourceName, interval, callback } = options;
+export const lockResource = async <T, E>({
+    resourceName,
+    callback,
+    onError,
+}: lockerResourceOptions<T, E>): Promise<T> => {
     const resourcePath = `${LOCKER_PREFIX}:${resourceName}`;
-    const redis = await getConnection();
-    const asked = await askForResource({ resourceName, resourcePath });
-    internalState.count += 1;
-    return new Promise((resolve, reject) => {
-        // check actual resource waiting list
-        let executing = false;
-        const waitingForResource = setInterval(async () => {
-            // update ping for this resource
-            if (dayjs().diff(asked.ping, 'millisecond') > LOCKER_PING_INTERVAL) {
-                asked.ping = dayjs().toISOString();
-                await redis.hset(resourcePath, asked.uniqueId, JSON.stringify(asked));
-            }
-
-            // check if it is my turn to execute
-            const rawQueue: string[] = await redis.hvals(resourcePath);
-            const queue: ResourceContent[] = rawQueue.map((v) => JSON.parse(v));
-            //             queue.sort((a, b) => {
-            //                 const ms = dayjs(a.ping).diff(b.ping, 'milliseconds');
-            //                 if (ms < 0) return -1;
-            //                 if (ms > 0) return 1;
-            //                 return ms;
-            //             });
-            const actual = queue.shift() as ResourceContent;
-            // console.log('actual', actual.uniqueId, 'asked', asked.uniqueId);
-            if (actual.uniqueId === asked.uniqueId && !executing) {
-                executing = true;
-                setImmediate(async () => {
-                    if (LOCKER_DEBUG_CONSOLE)
-                        console.log(`LOCKER(${asked.uniqueId}): Executing locked resource: ${resourceName}`);
-
-                    /** Execute callback routine in a protected environment */
-                    try {
-                        const result = await callback();
-                        resolve(result);
-                    } catch (err) {
-                        reject(err);
-                    }
-
-                    /** Maintain until callback finished, because we need update ping */
-                    clearInterval(waitingForResource);
-
-                    /** release the resource */
-                    await redis.hdel(resourcePath, asked.uniqueId);
-
-                    /** check for disconnect or not from redis */
-                    internalState.count -= 1;
-                    if (internalState.count === 0) await disconnect();
-                });
-            } else if (!executing && dayjs().diff(actual.ping, 'milliseconds') > LOCKER_PING_TIMEOUT) {
-                // who asked by resource is die
-                await redis.hdel(resourcePath, actual.uniqueId);
-            }
-        }, interval || LOCKER_CHECK_INTERVAL);
+    return new Promise((resolve) => {
+        const onFinished = (result: T) => {
+            resolve(result);
+        };
+        addResource({
+            resourcePath,
+            callback,
+            onError,
+            onFinished,
+        });
     });
 };

@@ -7,7 +7,7 @@
     "private": false,
     "dependencies": {
         "@nsfilho/redis-connection": "^0.1.9",
-        "dayjs": "^1.10.7",
+        "debug": "^4.3.2",
         "nanoid": "^3.1.30"
     },
     "author": {
@@ -25,10 +25,12 @@
     "devDependencies": {
         "@commitlint/cli": "^13.2.1",
         "@commitlint/config-conventional": "^13.2.0",
+        "@types/debug": "^4.1.7",
         "@types/jest": "^27.0.2",
         "@typescript-eslint/eslint-plugin": "^5.0.0",
         "@typescript-eslint/parser": "^5.0.0",
         "commitizen": "^4.2.4",
+        "cross-env": "^7.0.3",
         "cz-conventional-changelog": "3.3.0",
         "eslint": "^8.0.1",
         "eslint-config-airbnb": "^18.2.1",
@@ -54,8 +56,9 @@
         "docs": "typedoc src/index.ts",
         "prepages": "yarn docs",
         "pages": "gh-pages -d docs",
-        "test": "jest --detectOpenHandles",
-        "jest": "yarn test",
+        "test:withLogs": "cross-env DEBUG=* jest --detectOpenHandles",
+        "test:simple": "jest --detectOpenHandles",
+        "jest": "yarn test:simple",
         "release": "standard-version",
         "prepare": "husky install"
     },
