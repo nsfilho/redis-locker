@@ -37,16 +37,21 @@ export const lockResource = async <T, E>({
     resourceName,
     callback,
     onError,
-}: lockerResourceOptions<T, E>): Promise<T> => {
+}: lockerResourceOptions<T, E>): Promise<T | null> => {
     const resourcePath = `${LOCKER_PREFIX}:${resourceName}`;
-    return new Promise((resolve) => {
-        const onFinished = (result: T) => {
+    return new Promise((resolve, reject) => {
+        const onFinished = (result: T | null) => {
             resolve(result);
         };
+        const onThrowError = (err: E) => {
+            reject(err);
+        };
+        const localError = onError || onThrowError;
         addResource({
             resourcePath,
             callback,
-            onError,
+            onError: localError,
+            onThrowError,
             onFinished,
         });
     });

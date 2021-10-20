@@ -24,6 +24,7 @@ import { getTime } from './redis';
 import { addPing, removePing } from './ping';
 
 const logger = {
+    error: debug('redis-locker:resource-error'),
     info: debug('redis-locker:resource-info'),
     debug: debug('redis-locker:resource-debug'),
 };
@@ -31,7 +32,8 @@ const logger = {
 interface ResourceItem<T, E> {
     callback: () => Promise<T> | T;
     onError?: (error: E) => Promise<void> | void;
-    onFinished: (result: T) => void;
+    onThrowError: (error: E) => Promise<void> | void;
+    onFinished: (result: T | null) => void;
 }
 
 interface ControlItem<T, E> extends ResourceItem<T, E> {
@@ -50,7 +52,13 @@ interface addResourceOptions<T, E> extends ResourceItem<T, E> {
     resourcePath: string;
 }
 
-export const addResource = async <T, E>({ resourcePath, callback, onError, onFinished }: addResourceOptions<T, E>) => {
+export const addResource = async <T, E>({
+    resourcePath,
+    callback,
+    onError,
+    onThrowError,
+    onFinished,
+}: addResourceOptions<T, E>) => {
     if (!control[resourcePath]) {
         logger.debug(`Creating resource: ${resourcePath}`);
         control[resourcePath] = [];
@@ -62,6 +70,7 @@ export const addResource = async <T, E>({ resourcePath, callback, onError, onFin
         running: false,
         callback,
         onError,
+        onThrowError,
         onFinished,
     };
     logger.info(`Adding on ${resourcePath}, request: ${item.uniqueId}`);
@@ -124,19 +133,29 @@ const runResource = async ({ resourcePath, uniqueId }: runResourceOptions) => {
                 finishedTime - resourceToRun.startedAt
             })`,
         );
+        removeResource({ resourcePath, uniqueId });
+        resourceToRun.onFinished(result);
     } catch (err) {
-        try {
-            if (resourceToRun.onError) {
-                logger.info(`Run resource path: ${resourcePath}, item: ${uniqueId} - started error callback!`);
+        removeResource({ resourcePath, uniqueId });
+        if (resourceToRun.onError) {
+            logger.info(`Run resource path: ${resourcePath}, item: ${uniqueId} - started error callback!`);
+            try {
                 await resourceToRun.onError(err as Error);
-                logger.debug(`Run resource path: ${resourcePath}, item: ${uniqueId} - finished error callback!`);
+                logger.debug(
+                    `Run resource path: ${resourcePath}, item: ${uniqueId} - finished error callback WITHOUT a throw!`,
+                );
+                resourceToRun.onFinished(result);
+            } catch (err2) {
+                resourceToRun.onThrowError(err2);
             }
-        } catch (err2) {
-            logger.info(`Run resource path: ${resourcePath}, item: ${uniqueId} - error callback failure: ${err2}`);
+        } else {
+            // quiet error logging
+            logger.error(`Run resource path: ${resourcePath}, item: ${uniqueId} - error: ${err}!`);
+            // eslint-disable-next-line no-console
+            console.error(`Run resource path: ${resourcePath}, item: ${uniqueId} failed.`, err);
+            resourceToRun.onFinished(result);
         }
     }
-    removeResource({ resourcePath, uniqueId });
-    resourceToRun.onFinished(result);
     return result;
 };
 
