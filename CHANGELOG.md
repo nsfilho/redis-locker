@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/nsfilho/redis-locker/compare/v1.3.0...v1.4.0) (2021-10-20)
+
+
+### Features
+
+* **throw:** adding an advanced throw control ([c6af298](https://github.com/nsfilho/redis-locker/commit/c6af2982133d0b0916b0430f10085739fa232e68))
+
 ## [1.3.0](https://github.com/nsfilho/redis-locker/compare/v1.2.0...v1.3.0) (2021-10-19)
 
 
