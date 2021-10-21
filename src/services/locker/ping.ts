@@ -25,6 +25,7 @@ import {
     LOCKER_PING_INTERVAL,
     LOCKER_PING_TIMEOUT,
     LOCKER_RESOURCE_EXIT_TIMEOUT,
+    LOCKER_SINGLE_PING_THREAD,
 } from '../../constants';
 import { getTime, addRemote, multipleSetRemote, deleteRemote, listRemote } from './redis';
 import type { ChildMessage } from './pingbox';
@@ -37,10 +38,11 @@ const logger = {
 
 const control: {
     [index: string]: {
-        next: string | null;
-
         /** time to check the next current */
         interval: number;
+
+        /** stop handler */
+        stopHandler: NodeJS.Timeout | null;
 
         /** time to consider a ping timeout */
         pingTimeOut: number;
@@ -80,68 +82,74 @@ const eventPing = ({ resourcePath, uniqueId }: eventPingOptions) => {
     }
 };
 
+interface loopPingOptions {
+    resourcePath: string;
+}
+
+const loopPing = async ({ resourcePath }: loopPingOptions) => {
+    let lastPing = 0;
+    let lastDeaths = 0;
+    let deaths: string[] = [];
+    const resource = control[resourcePath];
+    const delay = () => new Promise((resolve) => setTimeout(resolve, resource.interval));
+    for (; resource.running; ) {
+        // eslint-disable-next-line no-await-in-loop
+        const currentTime = await getTime();
+
+        if (currentTime - lastPing > LOCKER_PING_INTERVAL && resource.items.length > 0) {
+            // update locals
+            const updates: string[] = [];
+            for (let x = 0; x < resource.items.length; x += 1) {
+                updates.push(resource.items[x]);
+                updates.push(currentTime.toString());
+            }
+            // eslint-disable-next-line no-await-in-loop
+            await multipleSetRemote({ resourcePath, keyValueArray: updates });
+            lastPing = currentTime;
+        }
+
+        // eslint-disable-next-line no-await-in-loop
+        const queue = await listRemote({ resourcePath });
+        if (currentTime - lastDeaths > resource.pingTimeOut) {
+            // check deaths
+            deaths = queue
+                .filter((item) => currentTime - item.lastPing > resource.pingTimeOut)
+                .map((item) => item.uniqueId);
+            if (deaths.length > 0) {
+                // eslint-disable-next-line no-await-in-loop
+                await deleteRemote({ resourcePath, keys: deaths });
+            }
+            lastDeaths = currentTime;
+        }
+
+        // take next
+        // eslint-disable-next-line no-loop-func
+        const next = queue.find((item) => !deaths.includes(item.uniqueId));
+        logger.debug(
+            `(${process.pid}) startPing item: ${next?.uniqueId} (ping: ${next?.lastPing}/${currentTime}), for ${resourcePath}`,
+        );
+        if (next && resource.items.includes(next.uniqueId)) {
+            eventPing({ resourcePath, uniqueId: next.uniqueId });
+        }
+
+        // eslint-disable-next-line no-await-in-loop
+        await delay();
+    }
+};
+
 interface startPingOptions {
     resourcePath: string;
 }
 
 const startPing = ({ resourcePath }: startPingOptions) => {
-    logger.info(`Starting ping control for resource: ${resourcePath}`);
-    const resource = control[resourcePath];
-    const delay = () => new Promise((resolve) => setTimeout(resolve, resource.interval));
+    logger.info(`(${process.pid}) Starting ping control for resource: ${resourcePath}`);
     setTimeout(async () => {
-        let lastPing = 0;
-        let lastDeaths = 0;
-        let deaths: string[] = [];
-        for (; resource.running; ) {
-            // eslint-disable-next-line no-await-in-loop
-            const currentTime = await getTime();
-
-            if (currentTime - lastPing > LOCKER_PING_INTERVAL) {
-                // update locals
-                const updates: string[] = [];
-                for (let x = 0; x < resource.items.length; x += 1) {
-                    updates.push(resource.items[x]);
-                    updates.push(currentTime.toString());
-                }
-                // eslint-disable-next-line no-await-in-loop
-                await multipleSetRemote({ resourcePath, keyValueArray: updates });
-                lastPing = currentTime;
-            }
-
-            // eslint-disable-next-line no-await-in-loop
-            const queue = await listRemote({ resourcePath });
-            if (currentTime - lastDeaths > resource.pingTimeOut) {
-                // check deaths
-                deaths = queue
-                    .filter((item) => currentTime - item.lastPing > resource.pingTimeOut)
-                    .map((item) => item.uniqueId);
-                if (deaths.length > 0) {
-                    // eslint-disable-next-line no-await-in-loop
-                    await deleteRemote({ resourcePath, keys: deaths });
-                }
-                lastDeaths = currentTime;
-            }
-
-            // take next
-            // eslint-disable-next-line no-loop-func
-            const next = queue.find((item) => !deaths.includes(item.uniqueId));
-            logger.debug(
-                `(${process.pid}) startPing item: ${next?.uniqueId} (ping: ${next?.lastPing}/${currentTime}), for ${resourcePath}`,
-            );
-            if (next && resource.items.includes(next.uniqueId)) {
-                eventPing({ resourcePath, uniqueId: next.uniqueId });
-            }
-
-            // eslint-disable-next-line no-await-in-loop
-            await delay();
-        }
+        await loopPing({ resourcePath });
         delete control[resourcePath];
+        logger.debug(`Stopped ping control for resource: ${resourcePath}`);
         if (Object.keys(control).length === 0) {
-            if (process.send) process.send({ type: 'exit' });
-            setTimeout(() => {
-                logger.debug(`Stopped ping control for resource: ${resourcePath}`);
-                process.exit(0);
-            }, LOCKER_RESOURCE_EXIT_TIMEOUT);
+            logger.debug(`Stopping thread`);
+            process.exit(0);
         }
     }, control[resourcePath].interval);
 };
@@ -151,9 +159,11 @@ interface stopPingOptions {
 }
 
 const stopPing = ({ resourcePath }: stopPingOptions) => {
-    logger.info(`Stopping ping control for resource: ${resourcePath}`);
+    logger.info(`(${process.pid}) Stopping ping control for resource: ${resourcePath}`);
     if (control[resourcePath]) {
-        control[resourcePath].running = false;
+        control[resourcePath].stopHandler = setTimeout(() => {
+            control[resourcePath].running = false;
+        }, LOCKER_RESOURCE_EXIT_TIMEOUT);
     }
 };
 
@@ -177,7 +187,7 @@ export const addPing = ({ resourcePath, uniqueId }: addPingOptions) => {
         }
         control[resourcePath] = {
             items: [],
-            next: null,
+            stopHandler: null,
             interval,
             pingTimeOut,
             running: true,
@@ -186,7 +196,12 @@ export const addPing = ({ resourcePath, uniqueId }: addPingOptions) => {
     }
     getTime()
         .then((currentTime) => {
-            control[resourcePath].items.push(uniqueId);
+            const localControl = control[resourcePath];
+            if (localControl.stopHandler) {
+                clearTimeout(localControl.stopHandler);
+                localControl.stopHandler = null;
+            }
+            localControl.items.push(uniqueId);
             return addRemote({ resourcePath, uniqueId, lastPing: currentTime });
         })
         .catch((err) => {

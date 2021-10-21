@@ -50,14 +50,12 @@ export const addPing = async ({ resourcePath, uniqueId }: addPingOptions) => {
             : fork(join(__dirname, 'ping'));
         control[threadName].on('exit', () => {
             logger.info(`Resource exited: ${resourcePath}`);
+            delete control[threadName];
         });
         control[threadName].on('message', (data: ChildMessage) => {
             if (data.type === 'next') {
                 logger.info(`From pingbox: ${process.pid}, ${data.resourcePath}, ${data.uniqueId}`);
                 eventResource({ resourcePath: data.resourcePath, uniqueId: data.uniqueId });
-            } else if (data.type === 'exit') {
-                logger.info(`Resource pre-exited: ${resourcePath}`);
-                delete control[threadName];
             }
         });
     }

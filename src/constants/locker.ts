@@ -41,7 +41,7 @@ export const LOCKER_CHECK_INTERVAL = process.env.LOCKER_CHECK_INTERVAL
 
 export const LOCKER_RESOURCE_EXIT_TIMEOUT = process.env.LOCKER_RESOURCE_EXIT_TIMEOUT
     ? parseInt(process.env.LOCKER_RESOURCE_EXIT_TIMEOUT, 10)
-    : 1000;
+    : 10000;
 
 export const LOCKER_PING_EVENT_FORCE = process.env.LOCKER_PING_EVENT_FORCE === 'true';
 
