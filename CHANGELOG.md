@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.4.4](https://github.com/nsfilho/redis-locker/compare/v1.4.3...v1.4.4) (2021-10-21)
+
+
+### Bug Fixes
+
+* **publisher:** single thread problem ([d3e073d](https://github.com/nsfilho/redis-locker/commit/d3e073d767777262afed831cebe69400776bfe92))
+
 ### [1.4.3](https://github.com/nsfilho/redis-locker/compare/v1.4.2...v1.4.3) (2021-10-21)
 
 
