@@ -46,9 +46,11 @@ const control: {
 } = {};
 
 const flowControl: {
-    running: string;
+    uniqueId: string;
+    resourcePath: string;
 } = {
-    running: '',
+    uniqueId: '',
+    resourcePath: '',
 };
 
 interface eventPingOptions {
@@ -57,9 +59,12 @@ interface eventPingOptions {
 }
 
 const eventPing = ({ resourcePath, uniqueId }: eventPingOptions) => {
-    logger.debug(`(${process.pid}) eventPing: ${resourcePath}, ${uniqueId}, ${flowControl.running}`);
-    if (process.send && flowControl.running !== uniqueId) {
-        flowControl.running = uniqueId;
+    logger.debug(
+        `(${process.pid}) eventPing: ${resourcePath}, ${flowControl.resourcePath}, ${uniqueId}, ${flowControl.uniqueId}`,
+    );
+    if (process.send && (flowControl.uniqueId !== uniqueId || flowControl.resourcePath !== resourcePath)) {
+        flowControl.uniqueId = uniqueId;
+        flowControl.resourcePath = resourcePath;
         process.send({ type: 'next', resourcePath, uniqueId });
     }
 };

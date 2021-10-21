@@ -9,7 +9,7 @@ const logger = {
     info: debug('jest-info'),
 };
 
-jest.setTimeout(120000);
+jest.setTimeout(30000);
 
 describe('Simple concurrency', () => {
     const x = 10;

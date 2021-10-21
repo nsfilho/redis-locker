@@ -37,7 +37,7 @@ export const LOCKER_PING_INTERVAL = process.env.LOCKER_PING_INTERVAL
  */
 export const LOCKER_CHECK_INTERVAL = process.env.LOCKER_CHECK_INTERVAL
     ? parseInt(process.env.LOCKER_CHECK_INTERVAL, 10)
-    : 100;
+    : 200;
 
 /**
  * Shows LOCKER informations in console for debug? Default: false.

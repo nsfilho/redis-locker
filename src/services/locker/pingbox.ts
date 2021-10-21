@@ -41,26 +41,27 @@ export interface ChildMessage {
 
 export const addPing = async ({ resourcePath, uniqueId }: addPingOptions) => {
     if (!control[resourcePath]) {
-        const resourcePing = process.env.JEST_WORKER_ID
+        control[resourcePath] = process.env.JEST_WORKER_ID
             ? fork(join(__dirname, 'ping'), {
                   execArgv: ['-r', 'ts-node/register'],
               })
             : fork(join(__dirname, 'ping'));
-        control[resourcePath] = resourcePing;
-        resourcePing.on('exit', () => {
-            logger.info(`Resource exited: ${resourcePath}`);
-            resourcePing.removeAllListeners();
+        control[resourcePath].on('exit', () => {
             delete control[resourcePath];
+            logger.info(`Resource exited: ${resourcePath}`);
         });
-        resourcePing.on('message', (data: ChildMessage) => {
-            // eslint-disable-next-line no-console
+        control[resourcePath].on('message', (data: ChildMessage) => {
             if (data.type === 'next') {
-                logger.info(`From pingbox: ${process.pid}, ${resourcePath}, ${data.uniqueId}`);
-                eventResource({ resourcePath, uniqueId: data.uniqueId });
+                logger.info(`From pingbox: ${process.pid}, ${data.resourcePath}, ${data.uniqueId}`);
+                eventResource({ resourcePath: data.resourcePath, uniqueId: data.uniqueId });
             }
         });
     }
-    control[resourcePath].send({ type: 'addPing', resourcePath, uniqueId });
+    try {
+        control[resourcePath].send({ type: 'addPing', resourcePath, uniqueId });
+    } catch (err) {
+        await addPing({ resourcePath, uniqueId });
+    }
 };
 
 export const removePing = async ({ resourcePath, uniqueId }: removePingOptions) => {
