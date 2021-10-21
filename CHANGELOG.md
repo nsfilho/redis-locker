@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.4.3](https://github.com/nsfilho/redis-locker/compare/v1.4.2...v1.4.3) (2021-10-21)
+
+
+### Features
+
+* **thread:** adding single thread for ping ([d99b7db](https://github.com/nsfilho/redis-locker/commit/d99b7dbafa5d845cca51a28d0cfe67f78f8ece98))
+
 ### [1.4.2](https://github.com/nsfilho/redis-locker/compare/v1.4.1...v1.4.2) (2021-10-21)
 
 
