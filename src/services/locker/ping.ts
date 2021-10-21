@@ -19,11 +19,18 @@
  *
  */
 import debug from 'debug';
-import { LOCKER_CHECK_INTERVAL, LOCKER_PING_INTERVAL, LOCKER_PING_TIMEOUT } from '../../constants';
+import {
+    LOCKER_CHECK_INTERVAL,
+    LOCKER_PING_EVENT_FORCE,
+    LOCKER_PING_INTERVAL,
+    LOCKER_PING_TIMEOUT,
+    LOCKER_RESOURCE_EXIT_TIMEOUT,
+} from '../../constants';
 import { getTime, addRemote, multipleSetRemote, deleteRemote, listRemote } from './redis';
 import type { ChildMessage } from './pingbox';
 
 const logger = {
+    error: debug('redis-locker:ping-error'),
     info: debug('redis-locker:ping-info'),
     debug: debug('redis-locker:ping-debug'),
 };
@@ -62,7 +69,11 @@ const eventPing = ({ resourcePath, uniqueId }: eventPingOptions) => {
     logger.debug(
         `(${process.pid}) eventPing: ${resourcePath}, ${flowControl.resourcePath}, ${uniqueId}, ${flowControl.uniqueId}`,
     );
-    if (process.send && (flowControl.uniqueId !== uniqueId || flowControl.resourcePath !== resourcePath)) {
+    if (
+        process.send &&
+        (LOCKER_PING_EVENT_FORCE || flowControl.uniqueId !== uniqueId || flowControl.resourcePath !== resourcePath)
+    ) {
+        logger.info(`${process.pid} eventPing: send start ${resourcePath}, ${uniqueId}`);
         flowControl.uniqueId = uniqueId;
         flowControl.resourcePath = resourcePath;
         process.send({ type: 'next', resourcePath, uniqueId });
@@ -125,8 +136,13 @@ const startPing = ({ resourcePath }: startPingOptions) => {
             await delay();
         }
         delete control[resourcePath];
-        logger.debug(`Stopped ping control for resource: ${resourcePath}`);
-        process.exit(0);
+        if (Object.keys(control).length === 0) {
+            if (process.send) process.send({ type: 'exit' });
+            setTimeout(() => {
+                logger.debug(`Stopped ping control for resource: ${resourcePath}`);
+                process.exit(0);
+            }, LOCKER_RESOURCE_EXIT_TIMEOUT);
+        }
     }, control[resourcePath].interval);
 };
 

@@ -39,7 +39,10 @@ export const LOCKER_CHECK_INTERVAL = process.env.LOCKER_CHECK_INTERVAL
     ? parseInt(process.env.LOCKER_CHECK_INTERVAL, 10)
     : 200;
 
-/**
- * Shows LOCKER informations in console for debug? Default: false.
- */
-export const LOCKER_DEBUG_CONSOLE = process.env.LOCKER_DEBUG_CONSOLE || false;
+export const LOCKER_RESOURCE_EXIT_TIMEOUT = process.env.LOCKER_RESOURCE_EXIT_TIMEOUT
+    ? parseInt(process.env.LOCKER_RESOURCE_EXIT_TIMEOUT, 10)
+    : 1000;
+
+export const LOCKER_PING_EVENT_FORCE = process.env.LOCKER_PING_EVENT_FORCE === 'true';
+
+export const LOCKER_SINGLE_PING_THREAD = process.env.LOCKER_SINGLE_PING_THREAD === 'true';

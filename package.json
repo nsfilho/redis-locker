@@ -57,6 +57,7 @@
         "prepages": "yarn docs",
         "pages": "gh-pages -d docs",
         "test:withLogs": "cross-env DEBUG=* jest --detectOpenHandles",
+        "test:single": "cross-env DEBUG=* LOCKER_SINGLE_PING_THREAD=true jest --detectOpenHandles",
         "test:simple": "jest --detectOpenHandles",
         "jest": "yarn test:simple",
         "release": "standard-version",

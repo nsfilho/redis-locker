@@ -23,6 +23,7 @@ import { join } from 'path';
 import { fork, ChildProcess } from 'child_process';
 import type { removePingOptions, addPingOptions } from './ping';
 import { eventResource } from './resource';
+import { LOCKER_SINGLE_PING_THREAD } from '../../constants';
 
 const logger = {
     info: debug('redis-locker:pingbox-info'),
@@ -40,32 +41,36 @@ export interface ChildMessage {
 }
 
 export const addPing = async ({ resourcePath, uniqueId }: addPingOptions) => {
-    if (!control[resourcePath]) {
-        control[resourcePath] = process.env.JEST_WORKER_ID
+    const threadName = LOCKER_SINGLE_PING_THREAD ? 'single' : resourcePath;
+    if (!control[threadName]) {
+        control[threadName] = process.env.JEST_WORKER_ID
             ? fork(join(__dirname, 'ping'), {
                   execArgv: ['-r', 'ts-node/register'],
               })
             : fork(join(__dirname, 'ping'));
-        control[resourcePath].on('exit', () => {
-            delete control[resourcePath];
+        control[threadName].on('exit', () => {
             logger.info(`Resource exited: ${resourcePath}`);
         });
-        control[resourcePath].on('message', (data: ChildMessage) => {
+        control[threadName].on('message', (data: ChildMessage) => {
             if (data.type === 'next') {
                 logger.info(`From pingbox: ${process.pid}, ${data.resourcePath}, ${data.uniqueId}`);
                 eventResource({ resourcePath: data.resourcePath, uniqueId: data.uniqueId });
+            } else if (data.type === 'exit') {
+                logger.info(`Resource pre-exited: ${resourcePath}`);
+                delete control[threadName];
             }
         });
     }
     try {
-        control[resourcePath].send({ type: 'addPing', resourcePath, uniqueId });
+        control[threadName].send({ type: 'addPing', resourcePath, uniqueId });
     } catch (err) {
         await addPing({ resourcePath, uniqueId });
     }
 };
 
 export const removePing = async ({ resourcePath, uniqueId }: removePingOptions) => {
-    if (control[resourcePath]) {
-        control[resourcePath].send({ type: 'removePing', resourcePath, uniqueId });
+    const threadName = LOCKER_SINGLE_PING_THREAD ? 'single' : resourcePath;
+    if (control[threadName]) {
+        control[threadName].send({ type: 'removePing', resourcePath, uniqueId });
     }
 };
