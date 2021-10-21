@@ -1,6 +1,15 @@
+import { debug } from 'debug';
 import { nanoid } from 'nanoid';
 import { disconnect } from '@nsfilho/redis-connection';
 import { lockResource } from './index';
+import { addRemote, getTime } from './redis';
+import { LOCKER_PING_INTERVAL, LOCKER_PING_TIMEOUT } from '../../constants';
+
+const logger = {
+    info: debug('jest-info'),
+};
+
+jest.setTimeout(120000);
 
 describe('Simple concurrency', () => {
     const x = 10;
@@ -13,7 +22,7 @@ describe('Simple concurrency', () => {
                 setTimeout(() => {
                     order.push(index);
                     // eslint-disable-next-line no-console
-                    console.log('Finalizado:', order.length);
+                    logger.info(`Finalizado: ${order.length}`);
                     resolve(true);
                 }, 10);
             });
@@ -86,6 +95,25 @@ describe('Throw tests', () => {
         } catch (err) {
             expect(err).toEqual(new Error('Complete new error'));
         }
+    });
+});
+
+describe('Dealing death jobs', () => {
+    it('Remove death jobs', async () => {
+        expect.assertions(1);
+        const currentTime = await getTime();
+        await addRemote({
+            resourcePath: 'dealingWithDeaths',
+            lastPing: currentTime - LOCKER_PING_TIMEOUT,
+            uniqueId: nanoid(),
+        });
+        await lockResource({
+            callback: async () => {
+                const deltaTime = await getTime();
+                expect(deltaTime - currentTime).toBeLessThanOrEqual(LOCKER_PING_INTERVAL * 2);
+            },
+            resourceName: 'dealingWithDeaths',
+        });
     });
 });
 

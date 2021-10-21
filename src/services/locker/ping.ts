@@ -21,7 +21,7 @@
 import debug from 'debug';
 import { LOCKER_CHECK_INTERVAL, LOCKER_PING_INTERVAL, LOCKER_PING_TIMEOUT } from '../../constants';
 import { getTime, addRemote, multipleSetRemote, deleteRemote, listRemote } from './redis';
-import { eventResource } from './resource';
+import type { ChildMessage } from './pingbox';
 
 const logger = {
     info: debug('redis-locker:ping-info'),
@@ -45,13 +45,23 @@ const control: {
     };
 } = {};
 
+const flowControl: {
+    running: string;
+} = {
+    running: '',
+};
+
 interface eventPingOptions {
     resourcePath: string;
     uniqueId: string;
 }
 
 const eventPing = ({ resourcePath, uniqueId }: eventPingOptions) => {
-    eventResource({ resourcePath, uniqueId });
+    logger.debug(`(${process.pid}) eventPing: ${resourcePath}, ${uniqueId}, ${flowControl.running}`);
+    if (process.send && flowControl.running !== uniqueId) {
+        flowControl.running = uniqueId;
+        process.send({ type: 'next', resourcePath, uniqueId });
+    }
 };
 
 interface startPingOptions {
@@ -70,7 +80,7 @@ const startPing = ({ resourcePath }: startPingOptions) => {
             // eslint-disable-next-line no-await-in-loop
             const currentTime = await getTime();
 
-            if (new Date().getTime() - lastPing > LOCKER_PING_INTERVAL) {
+            if (currentTime - lastPing > LOCKER_PING_INTERVAL) {
                 // update locals
                 const updates: string[] = [];
                 for (let x = 0; x < resource.items.length; x += 1) {
@@ -79,12 +89,12 @@ const startPing = ({ resourcePath }: startPingOptions) => {
                 }
                 // eslint-disable-next-line no-await-in-loop
                 await multipleSetRemote({ resourcePath, keyValueArray: updates });
-                lastPing = new Date().getTime();
+                lastPing = currentTime;
             }
 
             // eslint-disable-next-line no-await-in-loop
             const queue = await listRemote({ resourcePath });
-            if (new Date().getTime() - lastDeaths > resource.pingTimeOut) {
+            if (currentTime - lastDeaths > resource.pingTimeOut) {
                 // check deaths
                 deaths = queue
                     .filter((item) => currentTime - item.lastPing > resource.pingTimeOut)
@@ -93,13 +103,15 @@ const startPing = ({ resourcePath }: startPingOptions) => {
                     // eslint-disable-next-line no-await-in-loop
                     await deleteRemote({ resourcePath, keys: deaths });
                 }
-                lastDeaths = new Date().getTime();
+                lastDeaths = currentTime;
             }
 
             // take next
             // eslint-disable-next-line no-loop-func
             const next = queue.find((item) => !deaths.includes(item.uniqueId));
-            logger.debug(`startPing: current / next item: ${next?.uniqueId}`);
+            logger.debug(
+                `(${process.pid}) startPing item: ${next?.uniqueId} (ping: ${next?.lastPing}/${currentTime}), for ${resourcePath}`,
+            );
             if (next && resource.items.includes(next.uniqueId)) {
                 eventPing({ resourcePath, uniqueId: next.uniqueId });
             }
@@ -109,6 +121,7 @@ const startPing = ({ resourcePath }: startPingOptions) => {
         }
         delete control[resourcePath];
         logger.debug(`Stopped ping control for resource: ${resourcePath}`);
+        process.exit(0);
     }, control[resourcePath].interval);
 };
 
@@ -123,7 +136,7 @@ const stopPing = ({ resourcePath }: stopPingOptions) => {
     }
 };
 
-interface addPingOptions {
+export interface addPingOptions {
     uniqueId: string;
     resourcePath: string;
 }
@@ -160,7 +173,7 @@ export const addPing = ({ resourcePath, uniqueId }: addPingOptions) => {
         });
 };
 
-interface removePingOptions {
+export interface removePingOptions {
     uniqueId: string;
     resourcePath: string;
 }
@@ -178,3 +191,16 @@ export const removePing = ({ resourcePath, uniqueId }: removePingOptions) => {
         stopPing({ resourcePath });
     }
 };
+
+process.on('message', ({ type, resourcePath, uniqueId }: ChildMessage) => {
+    switch (type) {
+        case 'addPing':
+            addPing({ resourcePath, uniqueId });
+            break;
+        case 'removePing':
+            removePing({ resourcePath, uniqueId });
+            break;
+        default:
+            logger.info(`Ping message unrecognized: ${type}`);
+    }
+});

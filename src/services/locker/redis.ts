@@ -20,10 +20,20 @@
  */
 import { getConnection } from '@nsfilho/redis-connection';
 
+const state: {
+    deltaLocalTime: null | number;
+} = {
+    deltaLocalTime: null,
+};
+
 export const getTime = async () => {
-    const redis = await getConnection();
-    const current = await redis.time();
-    return parseInt(current.shift(), 10);
+    if (state.deltaLocalTime === null) {
+        const redis = await getConnection();
+        const current = await redis.time();
+        const remoteTimeSecs = parseInt(current.shift(), 10) * 1000;
+        state.deltaLocalTime = new Date().getTime() - remoteTimeSecs;
+    }
+    return new Date().getTime() + state.deltaLocalTime;
 };
 
 interface addRemoteOptions {

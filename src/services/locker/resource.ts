@@ -21,7 +21,7 @@
 import debug from 'debug';
 import { nanoid } from 'nanoid';
 import { getTime } from './redis';
-import { addPing, removePing } from './ping';
+import { addPing, removePing } from './pingbox';
 
 const logger = {
     error: debug('redis-locker:resource-error'),
@@ -138,7 +138,12 @@ const runResource = async ({ resourcePath, uniqueId }: runResourceOptions) => {
     } catch (err) {
         removeResource({ resourcePath, uniqueId });
         if (resourceToRun.onError) {
-            logger.info(`Run resource path: ${resourcePath}, item: ${uniqueId} - started error callback!`);
+            const finishedTime = await getTime();
+            logger.info(
+                `Run resource path: ${resourcePath}, item: ${uniqueId} - started error callback (${
+                    finishedTime - resourceToRun.startedAt
+                })!`,
+            );
             try {
                 await resourceToRun.onError(err as Error);
                 logger.debug(
@@ -167,6 +172,7 @@ interface eventResourceOptions {
 export const eventResource = ({ resourcePath, uniqueId }: eventResourceOptions) => {
     if (control[resourcePath]) {
         const resource = control[resourcePath].find((item) => item.uniqueId === uniqueId);
+        logger.debug(`(${process.pid}) eventResource - ${resourcePath}, ${JSON.stringify(resource)}`);
         if (resource && !resource.running) {
             runResource({ resourcePath, uniqueId });
         }
