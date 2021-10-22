@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.4.5](https://github.com/nsfilho/redis-locker/compare/v1.4.4...v1.4.5) (2021-10-22)
+
+
+### Features
+
+* **redis:** adding support to instance name ([fe960f8](https://github.com/nsfilho/redis-locker/commit/fe960f8e5ecdf319b00e7ec34541c09bd4bc18ae))
+
 ### [1.4.4](https://github.com/nsfilho/redis-locker/compare/v1.4.3...v1.4.4) (2021-10-21)
 
 

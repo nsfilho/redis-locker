@@ -1,6 +1,6 @@
 {
     "name": "@nsfilho/redis-locker",
-    "version": "1.4.4",
+    "version": "1.4.5",
     "main": "build/index.js",
     "type": "build/index.d.ts",
     "license": "GPL-3.0",
