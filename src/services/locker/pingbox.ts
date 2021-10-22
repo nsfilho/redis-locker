@@ -24,6 +24,7 @@ import { fork, ChildProcess } from 'child_process';
 import type { removePingOptions, addPingOptions } from './ping';
 import { eventResource } from './resource';
 import { LOCKER_SINGLE_PING_THREAD } from '../../constants';
+import { RedisInstance } from './redis';
 
 const logger = {
     info: debug('redis-locker:pingbox-info'),
@@ -37,10 +38,11 @@ const control: {
 export interface ChildMessage {
     type: string;
     resourcePath: string;
+    redis?: RedisInstance;
     uniqueId: string;
 }
 
-export const addPing = async ({ resourcePath, uniqueId }: addPingOptions) => {
+export const addPing = async ({ resourcePath, redis, uniqueId }: addPingOptions) => {
     const threadName = LOCKER_SINGLE_PING_THREAD ? 'single' : resourcePath;
     if (!control[threadName]) {
         control[threadName] = process.env.JEST_WORKER_ID
@@ -60,15 +62,33 @@ export const addPing = async ({ resourcePath, uniqueId }: addPingOptions) => {
         });
     }
     try {
-        control[threadName].send({ type: 'addPing', resourcePath, uniqueId });
+        control[threadName].send({ type: 'addPing', resourcePath, redis, uniqueId });
     } catch (err) {
-        await addPing({ resourcePath, uniqueId });
+        await addPing({ resourcePath, redis, uniqueId });
     }
 };
 
-export const removePing = async ({ resourcePath, uniqueId }: removePingOptions) => {
+export const removePing = async ({ resourcePath, redis, uniqueId }: removePingOptions) => {
     const threadName = LOCKER_SINGLE_PING_THREAD ? 'single' : resourcePath;
     if (control[threadName]) {
-        control[threadName].send({ type: 'removePing', resourcePath, uniqueId });
+        control[threadName].send({ type: 'removePing', resourcePath, redis, uniqueId });
     }
+};
+
+export const cleanPing = async (): Promise<boolean> => {
+    Object.values(control).forEach((instance) => {
+        logger.info(`(${process.pid}) Sending signal for ping to stop`);
+        if (instance.send) instance.send({ type: 'exit' });
+    });
+    //     const delay = () => new Promise((resolve) => setTimeout(resolve, LOCKER_CHECK_INTERVAL));
+    //     const waitFinish = async () => {
+    //         for (; Object.keys(control).length > 0; ) {
+    //             logger.debug(`(${process.pid}) Waiting pings stop...`);
+    //             // eslint-disable-next-line no-await-in-loop
+    //             await delay();
+    //         }
+    //         return true;
+    //     };
+    // return waitFinish();
+    return true;
 };

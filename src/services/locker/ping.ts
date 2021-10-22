@@ -25,9 +25,8 @@ import {
     LOCKER_PING_INTERVAL,
     LOCKER_PING_TIMEOUT,
     LOCKER_RESOURCE_EXIT_TIMEOUT,
-    LOCKER_SINGLE_PING_THREAD,
 } from '../../constants';
-import { getTime, addRemote, multipleSetRemote, deleteRemote, listRemote } from './redis';
+import { getTime, addRemote, multipleSetRemote, deleteRemote, listRemote, RedisInstance } from './redis';
 import type { ChildMessage } from './pingbox';
 
 const logger = {
@@ -84,9 +83,10 @@ const eventPing = ({ resourcePath, uniqueId }: eventPingOptions) => {
 
 interface loopPingOptions {
     resourcePath: string;
+    redis?: RedisInstance;
 }
 
-const loopPing = async ({ resourcePath }: loopPingOptions) => {
+const loopPing = async ({ resourcePath, redis }: loopPingOptions) => {
     let lastPing = 0;
     let lastDeaths = 0;
     let deaths: string[] = [];
@@ -94,7 +94,7 @@ const loopPing = async ({ resourcePath }: loopPingOptions) => {
     const delay = () => new Promise((resolve) => setTimeout(resolve, resource.interval));
     for (; resource.running; ) {
         // eslint-disable-next-line no-await-in-loop
-        const currentTime = await getTime();
+        const currentTime = await getTime({ redis });
 
         if (currentTime - lastPing > LOCKER_PING_INTERVAL && resource.items.length > 0) {
             // update locals
@@ -104,12 +104,12 @@ const loopPing = async ({ resourcePath }: loopPingOptions) => {
                 updates.push(currentTime.toString());
             }
             // eslint-disable-next-line no-await-in-loop
-            await multipleSetRemote({ resourcePath, keyValueArray: updates });
+            await multipleSetRemote({ resourcePath, redis, keyValueArray: updates });
             lastPing = currentTime;
         }
 
         // eslint-disable-next-line no-await-in-loop
-        const queue = await listRemote({ resourcePath });
+        const queue = await listRemote({ resourcePath, redis });
         if (currentTime - lastDeaths > resource.pingTimeOut) {
             // check deaths
             deaths = queue
@@ -117,7 +117,7 @@ const loopPing = async ({ resourcePath }: loopPingOptions) => {
                 .map((item) => item.uniqueId);
             if (deaths.length > 0) {
                 // eslint-disable-next-line no-await-in-loop
-                await deleteRemote({ resourcePath, keys: deaths });
+                await deleteRemote({ resourcePath, redis, keys: deaths });
             }
             lastDeaths = currentTime;
         }
@@ -139,16 +139,18 @@ const loopPing = async ({ resourcePath }: loopPingOptions) => {
 
 interface startPingOptions {
     resourcePath: string;
+    redis?: RedisInstance;
 }
 
-const startPing = ({ resourcePath }: startPingOptions) => {
+const startPing = ({ resourcePath, redis }: startPingOptions) => {
     logger.info(`(${process.pid}) Starting ping control for resource: ${resourcePath}`);
     setTimeout(async () => {
-        await loopPing({ resourcePath });
+        await loopPing({ resourcePath, redis });
         delete control[resourcePath];
         logger.debug(`Stopped ping control for resource: ${resourcePath}`);
         if (Object.keys(control).length === 0) {
             logger.debug(`Stopping thread`);
+            /** This will stop the connections with redis too */
             process.exit(0);
         }
     }, control[resourcePath].interval);
@@ -170,9 +172,10 @@ const stopPing = ({ resourcePath }: stopPingOptions) => {
 export interface addPingOptions {
     uniqueId: string;
     resourcePath: string;
+    redis?: RedisInstance;
 }
 
-export const addPing = ({ resourcePath, uniqueId }: addPingOptions) => {
+export const addPing = ({ resourcePath, redis, uniqueId }: addPingOptions) => {
     // add local
     if (!control[resourcePath]) {
         let interval = LOCKER_CHECK_INTERVAL;
@@ -192,9 +195,9 @@ export const addPing = ({ resourcePath, uniqueId }: addPingOptions) => {
             pingTimeOut,
             running: true,
         };
-        startPing({ resourcePath });
+        startPing({ resourcePath, redis });
     }
-    getTime()
+    getTime({ redis })
         .then((currentTime) => {
             const localControl = control[resourcePath];
             if (localControl.stopHandler) {
@@ -202,7 +205,7 @@ export const addPing = ({ resourcePath, uniqueId }: addPingOptions) => {
                 localControl.stopHandler = null;
             }
             localControl.items.push(uniqueId);
-            return addRemote({ resourcePath, uniqueId, lastPing: currentTime });
+            return addRemote({ resourcePath, redis, uniqueId, lastPing: currentTime });
         })
         .catch((err) => {
             logger.info(`addPing failed: ${err}, for resource: ${resourcePath} and request: ${uniqueId}`);
@@ -212,29 +215,34 @@ export const addPing = ({ resourcePath, uniqueId }: addPingOptions) => {
 export interface removePingOptions {
     uniqueId: string;
     resourcePath: string;
+    redis?: RedisInstance;
 }
 
-export const removePing = ({ resourcePath, uniqueId }: removePingOptions) => {
+export const removePing = ({ resourcePath, redis, uniqueId }: removePingOptions) => {
     if (!control[resourcePath]) {
         logger.info(`Remove ping for resource: ${resourcePath}, failed`);
         return;
     }
     logger.info(`Removing ping for: ${resourcePath} and request: ${uniqueId}`);
     control[resourcePath].items = control[resourcePath].items.filter((c) => c !== uniqueId);
-    deleteRemote({ resourcePath, keys: [uniqueId] });
+    deleteRemote({ resourcePath, redis, keys: [uniqueId] });
     if (control[resourcePath].items.length === 0) {
         logger.debug(`Cleaning ping control for resource: ${resourcePath}`);
         stopPing({ resourcePath });
     }
 };
 
-process.on('message', ({ type, resourcePath, uniqueId }: ChildMessage) => {
+process.on('message', ({ type, resourcePath, redis, uniqueId }: ChildMessage) => {
     switch (type) {
         case 'addPing':
-            addPing({ resourcePath, uniqueId });
+            addPing({ resourcePath, redis, uniqueId });
             break;
         case 'removePing':
-            removePing({ resourcePath, uniqueId });
+            removePing({ resourcePath, redis, uniqueId });
+            break;
+        case 'exit':
+            // pingbox asked us for die
+            process.exit(0);
             break;
         default:
             logger.info(`Ping message unrecognized: ${type}`);

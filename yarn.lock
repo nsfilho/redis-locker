@@ -916,11 +916,12 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@nsfilho/redis-connection@^0.1.9":
-  version "0.1.9"
-  resolved "https://registry.yarnpkg.com/@nsfilho/redis-connection/-/redis-connection-0.1.9.tgz#4151de49976b4dac3b7175b80e95dadcd4e2f238"
-  integrity sha512-1JETwE+wd80Ed5EDfxtfhkhyiy7eG+hcEKh+RuTZd069tlsfKkhqL1peJgY61+0rMXKSCcFSH9oZVghD640gxg==
+"@nsfilho/redis-connection@^0.1.10":
+  version "0.1.10"
+  resolved "https://registry.yarnpkg.com/@nsfilho/redis-connection/-/redis-connection-0.1.10.tgz#b179b584d9b1f340b2b5226dd721481a322e8201"
+  integrity sha512-eyvMPn6ctoEndToHQu2wuGdRXeQ6ovrLv1BYKCY8h8vGubr3ic5sMHqV6cF59xjOQS+j8LSJSXSBAIAJDqDBqA==
   dependencies:
+    debug "^4.3.2"
     ioredis "^4.28.0"
 
 "@sinonjs/commons@^1.7.0":
@@ -2199,11 +2200,6 @@ dateformat@^3.0.0:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/dateformat/-/dateformat-3.0.3.tgz#a6e37499a4d9a9cf85ef5872044d62901c9889ae"
   integrity sha512-jyCETtSl3VMZMWeRo7iY1FL19ges1t55hMo5yaam4Jrsm5EPL89UQkoQRyiI+Yf4k8r2ZpdngkV8hr1lIdjb3Q==
-
-dayjs@^1.10.7:
-  version "1.10.7"
-  resolved "https://registry.yarnpkg.com/dayjs/-/dayjs-1.10.7.tgz#2cf5f91add28116748440866a0a1d26f3a6ce468"
-  integrity sha512-P6twpd70BcPK34K26uJ1KT3wlhpuOAPoMwJzpsIWUxHZ7wpmbdZL/hQqBDfz7hGurYSa5PhzdhDHtt319hL3ig==
 
 debug@4, debug@^4.3.1, debug@^4.3.2:
   version "4.3.2"

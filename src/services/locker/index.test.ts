@@ -1,12 +1,16 @@
 import { debug } from 'debug';
 import { nanoid } from 'nanoid';
 import { disconnect } from '@nsfilho/redis-connection';
-import { lockResource } from './index';
+import { lockResource, stopLocalLockResource } from './index';
 import { addRemote, getTime } from './redis';
 import { LOCKER_PING_INTERVAL, LOCKER_PING_TIMEOUT } from '../../constants';
 
 const logger = {
     info: debug('jest-info'),
+};
+
+const redis = {
+    instance: 'redisLocker',
 };
 
 jest.setTimeout(30000);
@@ -50,6 +54,7 @@ describe('Throw tests', () => {
         try {
             await lockResource({
                 resourceName: nanoid(),
+                redis,
                 callback: async () => {
                     throw new Error('this is an error');
                 },
@@ -65,6 +70,7 @@ describe('Throw tests', () => {
         try {
             const result = await lockResource({
                 resourceName: nanoid(),
+                redis,
                 callback: async () => {
                     throw new Error('this is another error');
                 },
@@ -83,6 +89,7 @@ describe('Throw tests', () => {
         try {
             await lockResource({
                 resourceName: nanoid(),
+                redis,
                 callback: async () => {
                     throw new Error('Original error');
                 },
@@ -101,22 +108,24 @@ describe('Throw tests', () => {
 describe('Dealing death jobs', () => {
     it('Remove death jobs', async () => {
         expect.assertions(1);
-        const currentTime = await getTime();
+        const currentTime = await getTime({ redis });
         await addRemote({
             resourcePath: 'dealingWithDeaths',
+            redis,
             lastPing: currentTime - LOCKER_PING_TIMEOUT,
             uniqueId: nanoid(),
         });
         await lockResource({
+            resourceName: 'dealingWithDeaths',
+            redis,
             callback: async () => {
-                const deltaTime = await getTime();
+                const deltaTime = await getTime({ redis });
                 expect(deltaTime - currentTime).toBeLessThanOrEqual(LOCKER_PING_INTERVAL * 2);
             },
-            resourceName: 'dealingWithDeaths',
         });
     });
 });
 
-afterAll(() => {
-    disconnect();
+afterAll((done) => {
+    Promise.all([disconnect(), disconnect(redis), stopLocalLockResource()]).then(() => done());
 });

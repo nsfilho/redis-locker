@@ -21,9 +21,13 @@
 /* eslint-disable no-console */
 import { LOCKER_PREFIX } from '../../constants';
 import { addResource } from './resource';
+import { cleanPing } from './pingbox';
+import type { RedisInstance } from './redis';
 
 export interface lockerResourceOptions<T, E> {
     resourceName: string;
+    /** Redis Informations to connect. Deafult: instance = 'main' */
+    redis?: RedisInstance;
     callback: () => Promise<T> | T;
     onError?: (err: E) => Promise<void> | void;
 }
@@ -35,6 +39,7 @@ export interface lockerResourceOptions<T, E> {
  */
 export const lockResource = async <T, E>({
     resourceName,
+    redis,
     callback,
     onError,
 }: lockerResourceOptions<T, E>): Promise<T | null> => {
@@ -49,10 +54,15 @@ export const lockResource = async <T, E>({
         const localError = onError || onThrowError;
         addResource({
             resourcePath,
+            redis,
             callback,
             onError: localError,
             onThrowError,
             onFinished,
         });
     });
+};
+
+export const stopLocalLockResource = async () => {
+    cleanPing();
 };

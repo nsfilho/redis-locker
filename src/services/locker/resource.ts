@@ -20,7 +20,7 @@
  */
 import debug from 'debug';
 import { nanoid } from 'nanoid';
-import { getTime } from './redis';
+import { RedisInstance } from './redis';
 import { addPing, removePing } from './pingbox';
 
 const logger = {
@@ -50,10 +50,12 @@ const control: {
 
 interface addResourceOptions<T, E> extends ResourceItem<T, E> {
     resourcePath: string;
+    redis?: RedisInstance;
 }
 
 export const addResource = async <T, E>({
     resourcePath,
+    redis,
     callback,
     onError,
     onThrowError,
@@ -63,7 +65,7 @@ export const addResource = async <T, E>({
         logger.debug(`Creating resource: ${resourcePath}`);
         control[resourcePath] = [];
     }
-    const currentTime = await getTime();
+    const currentTime = new Date().getTime();
     const item: ControlItem<T, E> = {
         addedAt: currentTime,
         uniqueId: nanoid(),
@@ -75,7 +77,7 @@ export const addResource = async <T, E>({
     };
     logger.info(`Adding on ${resourcePath}, request: ${item.uniqueId}`);
     control[resourcePath].push(item);
-    addPing({ resourcePath, uniqueId: item.uniqueId });
+    addPing({ resourcePath, redis, uniqueId: item.uniqueId });
 };
 
 interface cleanResourceOptions {
@@ -119,7 +121,7 @@ const runResource = async ({ resourcePath, uniqueId }: runResourceOptions) => {
     /** Mark as in execution */
     logger.info(`Run resource path: ${resourcePath}, item: ${uniqueId} - started!`);
     resourceToRun.running = true;
-    resourceToRun.startedAt = await getTime();
+    resourceToRun.startedAt = new Date().getTime();
 
     /** Run the callback function */
     let result = null;
@@ -127,7 +129,7 @@ const runResource = async ({ resourcePath, uniqueId }: runResourceOptions) => {
         result = await resourceToRun.callback();
 
         /** statistics purposes */
-        const finishedTime = await getTime();
+        const finishedTime = new Date().getTime();
         logger.debug(
             `Run resource path: ${resourcePath}, item: ${uniqueId} - finished (${
                 finishedTime - resourceToRun.startedAt
@@ -138,7 +140,7 @@ const runResource = async ({ resourcePath, uniqueId }: runResourceOptions) => {
     } catch (err) {
         removeResource({ resourcePath, uniqueId });
         if (resourceToRun.onError) {
-            const finishedTime = await getTime();
+            const finishedTime = new Date().getTime();
             logger.info(
                 `Run resource path: ${resourcePath}, item: ${uniqueId} - started error callback (${
                     finishedTime - resourceToRun.startedAt

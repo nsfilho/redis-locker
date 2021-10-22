@@ -26,10 +26,20 @@ const state: {
     deltaLocalTime: null,
 };
 
-export const getTime = async () => {
+export interface RedisInstance {
+    instance: string;
+    nodes?: string;
+    password?: string;
+}
+
+interface getTimeOptions {
+    redis?: RedisInstance;
+}
+
+export const getTime = async ({ redis }: getTimeOptions) => {
     if (state.deltaLocalTime === null) {
-        const redis = await getConnection();
-        const current = await redis.time();
+        const redisInstance = await getConnection(redis);
+        const current = await redisInstance.time();
         const remoteTimeSecs = parseInt(current.shift(), 10) * 1000;
         state.deltaLocalTime = new Date().getTime() - remoteTimeSecs;
     }
@@ -38,17 +48,19 @@ export const getTime = async () => {
 
 interface addRemoteOptions {
     resourcePath: string;
+    redis?: RedisInstance;
     uniqueId: string;
     lastPing: number;
 }
 
-export const addRemote = async ({ resourcePath, uniqueId, lastPing }: addRemoteOptions) => {
-    const redis = await getConnection();
-    await redis.hset(resourcePath, uniqueId, lastPing);
+export const addRemote = async ({ resourcePath, redis, uniqueId, lastPing }: addRemoteOptions) => {
+    const redisInstance = await getConnection(redis);
+    await redisInstance.hset(resourcePath, uniqueId, lastPing);
 };
 
 interface listRemoteOptions {
     resourcePath: string;
+    redis?: RedisInstance;
 }
 
 interface listRemoteReturn {
@@ -56,9 +68,9 @@ interface listRemoteReturn {
     lastPing: number;
 }
 
-export const listRemote = async ({ resourcePath }: listRemoteOptions): Promise<listRemoteReturn[]> => {
-    const redis = await getConnection();
-    const queue = await redis.hgetall(resourcePath);
+export const listRemote = async ({ resourcePath, redis }: listRemoteOptions): Promise<listRemoteReturn[]> => {
+    const redisInstance = await getConnection(redis);
+    const queue = await redisInstance.hgetall(resourcePath);
     if (!queue) {
         return [];
     }
@@ -70,20 +82,22 @@ export const listRemote = async ({ resourcePath }: listRemoteOptions): Promise<l
 
 interface deleteRemoteOptions {
     resourcePath: string;
+    redis?: RedisInstance;
     keys: string[];
 }
 
-export const deleteRemote = async ({ resourcePath, keys }: deleteRemoteOptions) => {
-    const redis = await getConnection();
-    await redis.hdel(resourcePath, ...keys);
+export const deleteRemote = async ({ resourcePath, redis, keys }: deleteRemoteOptions) => {
+    const redisInstance = await getConnection(redis);
+    await redisInstance.hdel(resourcePath, ...keys);
 };
 
 interface multipleSetRemoteOptions {
     resourcePath: string;
+    redis?: RedisInstance;
     keyValueArray: string[];
 }
 
-export const multipleSetRemote = async ({ resourcePath, keyValueArray }: multipleSetRemoteOptions) => {
-    const redis = await getConnection();
-    await redis.hmset(resourcePath, keyValueArray);
+export const multipleSetRemote = async ({ resourcePath, redis, keyValueArray }: multipleSetRemoteOptions) => {
+    const redisInstance = await getConnection(redis);
+    await redisInstance.hmset(resourcePath, keyValueArray);
 };
