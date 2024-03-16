@@ -38,9 +38,10 @@ interface getTimeOptions {
 
 export const getTime = async ({ redis }: getTimeOptions) => {
     if (state.deltaLocalTime === null) {
+        let remoteTimeSecs = 0;
         const redisInstance = await getConnection(redis);
-        const current = await redisInstance.time();
-        const remoteTimeSecs = parseInt(current.shift(), 10) * 1000;
+        const current = (await redisInstance.time()).shift();
+        if (current) remoteTimeSecs = current * 1000;
         state.deltaLocalTime = new Date().getTime() - remoteTimeSecs;
     }
     return new Date().getTime() + state.deltaLocalTime;

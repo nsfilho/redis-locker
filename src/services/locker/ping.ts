@@ -86,12 +86,16 @@ interface loopPingOptions {
     redis?: RedisInstance;
 }
 
+const delay = (timeout: number) =>
+    new Promise((resolve) => {
+        setTimeout(() => resolve(true), timeout);
+    });
+
 const loopPing = async ({ resourcePath, redis }: loopPingOptions) => {
     let lastPing = 0;
     let lastDeaths = 0;
     let deaths: string[] = [];
     const resource = control[resourcePath];
-    const delay = () => new Promise((resolve) => setTimeout(resolve, resource.interval));
     for (; resource.running; ) {
         // eslint-disable-next-line no-await-in-loop
         const currentTime = await getTime({ redis });
@@ -133,7 +137,7 @@ const loopPing = async ({ resourcePath, redis }: loopPingOptions) => {
         }
 
         // eslint-disable-next-line no-await-in-loop
-        await delay();
+        await delay(resource.interval);
     }
 };
 

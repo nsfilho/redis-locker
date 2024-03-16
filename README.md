@@ -1,12 +1,14 @@
 # Redis-Locker Library
 
-A very simple and small library to guarantee a exclusive execution of a function in
-a multi-instance environment like `docker` and `kubernetes` (k8s).
+A very simple and small library to guarantee a exclusive execution of a function
+in a multi-instance environment like `docker` and `kubernetes` (k8s).
 
-It is very useful for migrations (only one API/Micro-services instance will execute at
-the same time).
+It is very useful for migrations (only one API/Micro-services instance will
+execute at the same time).
 
-> By design, for an easy use, this library will use some environment variables and an exclusive connection with `redis` (because sometimes your redis connection isn't available to guarantee the role process).
+> By design, for an easy use, this library will use some environment variables
+> and an exclusive connection with `redis` (because sometimes your redis connection
+> isn't available to guarantee the role process).
 
 -   Project licensed under: GPLv3
 -   Site Documentation: [Homepage](https://nsfilho.github.io/redis-locker/index.html)
