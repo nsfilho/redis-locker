@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/nsfilho/redis-locker/compare/v1.4.5...v1.5.0) (2024-03-16)
+
+
+### Features
+
+* upgrading libs ([e4e0cb9](https://github.com/nsfilho/redis-locker/commit/e4e0cb9200eb1e6cd4fa68121691b3c0d7ea0bd4))
+
 ### [1.4.5](https://github.com/nsfilho/redis-locker/compare/v1.4.4...v1.4.5) (2021-10-22)
 
 
